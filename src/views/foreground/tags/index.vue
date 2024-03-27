@@ -1,34 +1,10 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="ID" prop="tagId">
-        <el-input
-          v-model="queryParams.tagId"
-          placeholder="请输入ID"
-          clearable
-          @keyup.enter="handleQuery"
-        />
-      </el-form-item>
       <el-form-item label="标签名" prop="tagName">
         <el-input
           v-model="queryParams.tagName"
           placeholder="请输入标签名"
-          clearable
-          @keyup.enter="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="标签颜色" prop="tagColor">
-        <el-input
-          v-model="queryParams.tagColor"
-          placeholder="请输入标签颜色"
-          clearable
-          @keyup.enter="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="标签阴影" prop="tagShadow">
-        <el-input
-          v-model="queryParams.tagShadow"
-          placeholder="请输入标签阴影"
           clearable
           @keyup.enter="handleQuery"
         />
@@ -83,7 +59,6 @@
 
     <el-table v-loading="loading" :data="tagsList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="ID" align="center" prop="tagId" />
       <el-table-column label="标签名" align="center" prop="tagName" />
       <el-table-column label="标签颜色" align="center" prop="tagColor" >
         <template #default="scope">
@@ -161,8 +136,6 @@ const data = reactive({
     pageSize: 20,
     tagId: null,
     tagName: null,
-    tagColor: null,
-    tagShadow: null
   },
   rules: {
     tagName: [
@@ -284,7 +257,8 @@ function submitForm() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const _tagIds = row.tagId || ids.value;
-  proxy.$modal.confirm('是否确认删除标签编号为"' + _tagIds + '"的数据项？').then(function() {
+  const _tagName = row.tagName || ids.value;
+  proxy.$modal.confirm('是否确认删除"' + _tagName + '"的数据项？').then(function() {
     return delTags(_tagIds);
   }).then(() => {
     getList();
