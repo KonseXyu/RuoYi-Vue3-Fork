@@ -307,13 +307,13 @@ function submitForm() {
       form.value.bookChaptersList = bookChaptersList.value;
         console.log(form.value)
       if (form.value.bookId != null) {
-        updateBooks(form.value).then(response => {
+        updateBooks(form.value).then(() => {
           proxy.$modal.msgSuccess("修改成功");
           open.value = false;
           getList();
         });
       } else {
-        addBooks(form.value).then(response => {
+        addBooks(form.value).then(() => {
           proxy.$modal.msgSuccess("新增成功");
           open.value = false;
           getList();
