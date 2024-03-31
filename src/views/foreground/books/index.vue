@@ -277,7 +277,7 @@ function resetQuery() {
 // 多选框选中数据
 function handleSelectionChange(selection) {
   ids.value = selection.map(item => item.bookId);
-  single.value = selection.length != 1;
+  single.value = selection.length !== 1;
   multiple.value = !selection.length;
 }
 
@@ -348,13 +348,13 @@ function handleAddBookChapters() {
 
 /** 书籍的章节信息删除按钮操作 */
 function handleDeleteBookChapters() {
-  if (checkedBookChapters.value.length == 0) {
+  if (checkedBookChapters.value.length === 0) {
     proxy.$modal.msgError("请先选择要删除的书籍的章节信息数据");
   } else {
     const bookChapterss = bookChaptersList.value;
     const checkedBookChapterss = checkedBookChapters.value;
     bookChaptersList.value = bookChapterss.filter(function(item) {
-      return checkedBookChapterss.indexOf(item.index) == -1
+      return checkedBookChapterss.indexOf(item.index) === -1
     });
   }
 }
