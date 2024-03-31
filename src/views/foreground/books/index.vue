@@ -18,18 +18,6 @@
         />
       </el-form-item>
       <el-form-item label="书籍封面" prop="bookCover">
-          <el-form ref="elForm" :model="formData" :rules="rules" size="medium" label-width="100px">
-              <el-form-item label="上传" prop="field102" required>
-                  <el-upload ref="field102" :file-list="field102fileList" :action="field102Action"
-                             :before-upload="field102BeforeUpload">
-                      <el-button size="small" type="primary" icon="el-icon-upload">点击上传</el-button>
-                  </el-upload>
-              </el-form-item>
-          </el-form>
-          <div slot="footer">
-              <el-button @click="close">取消</el-button>
-              <el-button type="primary" @click="handleConfirm">确定</el-button>
-          </div>
         <el-input
           v-model="queryParams.bookCover"
           placeholder="请输入书籍封面"
@@ -37,7 +25,7 @@
           @keyup.enter="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="书籍ISBN号" prop="bookIsbn">
+      <el-form-item label="ISBN" prop="bookIsbn">
         <el-input
           v-model="queryParams.bookIsbn"
           placeholder="请输入书籍ISBN号"
@@ -98,9 +86,13 @@
       <el-table-column label="书籍id" align="center" prop="bookId" />
       <el-table-column label="书籍名字" align="center" prop="bookName" />
       <el-table-column label="书籍作者" align="center" prop="bookAuthor" />
-      <el-table-column label="书籍封面" align="center" prop="bookCover" />
+      <el-table-column label="书籍封面" align="center" prop="bookCover" >
+        <template #default="scope">
+            <image-preview :width=40 :height=50 :src="scope.row.bookCover" />
+        </template>
+      </el-table-column>
       <el-table-column label="书籍ISBN号" align="center" prop="bookIsbn" />
-      <el-table-column label="书籍简介" align="center" prop="bookSummary" />
+      <el-table-column label="书籍简介" align="center" prop="bookSummary" show-overflow-tooltip/>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['foreground:books:edit']">修改</el-button>
@@ -108,7 +100,7 @@
         </template>
       </el-table-column>
     </el-table>
-    
+
     <pagination
       v-show="total>0"
       :total="total"
@@ -118,7 +110,7 @@
     />
 
     <!-- 添加或修改书籍信息对话框 -->
-    <el-dialog :title="title" v-model="open" width="500px" append-to-body>
+    <el-dialog :title="title" v-model="open" width="600px" append-to-body>
       <el-form ref="booksRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="书籍名字" prop="bookName">
           <el-input v-model="form.bookName" placeholder="请输入书籍名字" />
@@ -126,8 +118,19 @@
         <el-form-item label="书籍作者" prop="bookAuthor">
           <el-input v-model="form.bookAuthor" placeholder="请输入书籍作者" />
         </el-form-item>
+<!--        <el-form-item label="" prop="bookCover" v-if="form.bookCover || false" >-->
+<!--        </el-form-item>-->
         <el-form-item label="书籍封面" prop="bookCover">
-          <el-input v-model="form.bookCover" placeholder="请输入书籍封面" />
+            <image-upload
+                    v-model="form.bookCover"
+                    :url="upload.url"
+                    :limit="1"
+                    :headers="upload.headers"
+                    :is-uploading="upload.isUploading"
+                    @file-upload-progress="handleFileUploadProgress"
+                    @file-success="handleFileSuccess"
+            />
+
         </el-form-item>
         <el-form-item label="书籍ISBN号" prop="bookIsbn">
           <el-input v-model="form.bookIsbn" placeholder="请输入书籍ISBN号" />
@@ -147,7 +150,7 @@
         <el-table :data="bookChaptersList" :row-class-name="rowBookChaptersIndex" @selection-change="handleBookChaptersSelectionChange" ref="bookChapters">
           <el-table-column type="selection" width="50" align="center" />
           <el-table-column label="序号" align="center" prop="index" width="50"/>
-          <el-table-column label="章节信息" prop="chapterInfo" width="150">
+          <el-table-column label="章节信息" prop="chapterInfo" width="450">
             <template #default="scope">
               <el-input v-model="scope.row.chapterInfo" placeholder="请输入章节信息" />
             </template>
@@ -164,8 +167,11 @@
   </div>
 </template>
 
-<script setup name="Books">
-import { listBooks, getBooks, delBooks, addBooks, updateBooks } from "@/api/foreground/books";
+<script setup name="Books" >
+import {listBooks, getBooks, delBooks, addBooks, updateBooks} from "@/api/foreground/books";
+import {getToken} from "@/utils/auth.js";
+import ImagePreview from "@/components/ImagePreview/index.vue";
+import ImageUpload from "@/components/ImageUpload/index.vue";
 
 const { proxy } = getCurrentInstance();
 
@@ -180,6 +186,7 @@ const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
 const title = ref("");
+const imageUrl = ref("");
 
 const data = reactive({
   form: {},
@@ -205,11 +212,19 @@ const data = reactive({
     lastUpdate: [
       { required: true, message: "最后更新时间不能为空", trigger: "blur" }
     ],
-    version: [
-      { required: true, message: "乐观锁不能为空", trigger: "blur" }
-    ]
   }
 });
+
+/*** 用户导入参数 */
+const upload = reactive({
+    // 是否禁用上传
+    isUploading: false,
+    // 设置上传的请求头部
+    headers: { Authorization: "Bearer " + getToken() },
+    // 上传的地址
+    url: import.meta.env.VITE_APP_BASE_API + "/foreground/books/uploadCover",
+});
+
 
 const { queryParams, form, rules } = toRefs(data);
 
@@ -243,6 +258,7 @@ function reset() {
     version: null
   };
   bookChaptersList.value = [];
+  imageUrl.value = "";
   proxy.resetForm("booksRef");
 }
 
@@ -289,6 +305,7 @@ function submitForm() {
   proxy.$refs["booksRef"].validate(valid => {
     if (valid) {
       form.value.bookChaptersList = bookChaptersList.value;
+        console.log(form.value)
       if (form.value.bookId != null) {
         updateBooks(form.value).then(response => {
           proxy.$modal.msgSuccess("修改成功");
@@ -353,6 +370,17 @@ function handleExport() {
     ...queryParams.value
   }, `books_${new Date().getTime()}.xlsx`)
 }
+// 上传文件进度
+function handleFileUploadProgress(event) {
+  upload.isUploading = true;
+}
 
+// 上传文件成功
+function handleFileSuccess(response) {
+    console.log(response.data)
+  upload.isUploading = false;
+  imageUrl.value = response.data;
+  form.bookCover = imageUrl.value;
+}
 getList();
 </script>
