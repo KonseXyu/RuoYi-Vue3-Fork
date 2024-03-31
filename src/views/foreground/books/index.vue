@@ -371,7 +371,7 @@ function handleExport() {
   }, `books_${new Date().getTime()}.xlsx`)
 }
 // 上传文件进度
-function handleFileUploadProgress(event) {
+function handleFileUploadProgress() {
   upload.isUploading = true;
 }
 
