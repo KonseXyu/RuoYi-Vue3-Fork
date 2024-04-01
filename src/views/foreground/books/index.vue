@@ -123,12 +123,7 @@
         <el-form-item label="书籍封面" prop="bookCover">
             <image-upload
                     v-model="form.bookCover"
-                    :url="upload.url"
                     :limit="1"
-                    :headers="upload.headers"
-                    :is-uploading="upload.isUploading"
-                    @file-upload-progress="handleFileUploadProgress"
-                    @file-success="handleFileSuccess"
             />
 
         </el-form-item>
@@ -186,7 +181,6 @@ const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
 const title = ref("");
-const imageUrl = ref("");
 
 const data = reactive({
   form: {},
@@ -213,16 +207,6 @@ const data = reactive({
       { required: true, message: "最后更新时间不能为空", trigger: "blur" }
     ],
   }
-});
-
-/*** 用户导入参数 */
-const upload = reactive({
-    // 是否禁用上传
-    isUploading: false,
-    // 设置上传的请求头部
-    headers: { Authorization: "Bearer " + getToken() },
-    // 上传的地址
-    url: import.meta.env.VITE_APP_BASE_API + "/foreground/books/uploadCover",
 });
 
 
@@ -258,7 +242,6 @@ function reset() {
     version: null
   };
   bookChaptersList.value = [];
-  imageUrl.value = "";
   proxy.resetForm("booksRef");
 }
 
@@ -370,17 +353,6 @@ function handleExport() {
     ...queryParams.value
   }, `books_${new Date().getTime()}.xlsx`)
 }
-// 上传文件进度
-function handleFileUploadProgress() {
-  upload.isUploading = true;
-}
 
-// 上传文件成功
-function handleFileSuccess(response) {
-    console.log(response.data)
-  upload.isUploading = false;
-  imageUrl.value = response.data;
-  form.bookCover = imageUrl.value;
-}
 getList();
 </script>
