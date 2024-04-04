@@ -33,6 +33,38 @@
           @keyup.enter="handleQuery"
         />
       </el-form-item>
+      <el-form-item label="更新时间" prop="lastUpdate">
+          <el-date-picker clearable
+                          v-model="queryParams.lastUpdate"
+                          type="date"
+                          value-format="YYYY-MM-DD"
+                          placeholder="请选择更新时间">
+          </el-date-picker>
+      </el-form-item>
+      <el-form-item label="创建时间" prop="createTime">
+          <el-date-picker clearable
+                          v-model="queryParams.createTime"
+                          type="date"
+                          value-format="YYYY-MM-DD"
+                          placeholder="请选择创建时间">
+          </el-date-picker>
+      </el-form-item>
+      <el-form-item label="更新人" prop="updateBy">
+          <el-input
+                  v-model="queryParams.updateBy"
+                  placeholder="请输入更新人"
+                  clearable
+                  @keyup.enter="handleQuery"
+          />
+      </el-form-item>
+      <el-form-item label="创建人" prop="createBy">
+          <el-input
+                  v-model="queryParams.createBy"
+                  placeholder="请输入创建人"
+                  clearable
+                  @keyup.enter="handleQuery"
+          />
+      </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
         <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -93,6 +125,18 @@
       </el-table-column>
       <el-table-column label="书籍ISBN号" align="center" prop="bookIsbn" />
       <el-table-column label="书籍简介" align="center" prop="bookSummary" show-overflow-tooltip/>
+      <el-table-column label="创建人" align="center" prop="createBy" />
+      <el-table-column label="创建时间" align="center" prop="createTime" width="180">
+          <template #default="scope">
+              <span>{{ parseTime(scope.row.createTime, '{y}-{m}-{d}') }}</span>
+          </template>
+      </el-table-column>
+      <el-table-column label="更新人" align="center" prop="updateBy" />
+      <el-table-column label="更新时间" align="center" prop="lastUpdate" width="180">
+          <template #default="scope">
+              <span>{{ parseTime(scope.row.lastUpdate, '{y}-{m}-{d}') }}</span>
+          </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['foreground:books:edit']">修改</el-button>
@@ -167,6 +211,7 @@ import {listBooks, getBooks, delBooks, addBooks, updateBooks} from "@/api/foregr
 import {getToken} from "@/utils/auth.js";
 import ImagePreview from "@/components/ImagePreview/index.vue";
 import ImageUpload from "@/components/ImageUpload/index.vue";
+import {parseTime} from "@/utils/ruoyi.js";
 
 const { proxy } = getCurrentInstance();
 
@@ -192,6 +237,10 @@ const data = reactive({
     bookCover: null,
     bookIsbn: null,
     bookSummary: null,
+    createTime: null,
+    updateBy: null,
+    createBy: null,
+    lastUpdate: null,
   },
   rules: {
     bookName: [
@@ -237,9 +286,12 @@ function reset() {
     bookCover: null,
     bookIsbn: null,
     bookSummary: null,
-    lastUpdate: null,
     lastChapter: null,
-    version: null
+    version: null,
+    createTime: null,
+    updateBy: null,
+    createBy: null,
+    lastUpdate: null,
   };
   bookChaptersList.value = [];
   proxy.resetForm("booksRef");
