@@ -1,10 +1,42 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="标题" prop="carouselTitle">
+      <el-form-item label="轮播图标题" prop="carouselTitle">
         <el-input
           v-model="queryParams.carouselTitle"
           placeholder="请输入轮播图标题"
+          clearable
+          @keyup.enter="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="更新时间" prop="updateTime">
+        <el-date-picker clearable
+          v-model="queryParams.updateTime"
+          type="date"
+          value-format="YYYY-MM-DD"
+          placeholder="请选择更新时间">
+        </el-date-picker>
+      </el-form-item>
+      <el-form-item label="创建时间" prop="createTime">
+        <el-date-picker clearable
+          v-model="queryParams.createTime"
+          type="date"
+          value-format="YYYY-MM-DD"
+          placeholder="请选择创建时间">
+        </el-date-picker>
+      </el-form-item>
+      <el-form-item label="更新人" prop="updateBy">
+        <el-input
+          v-model="queryParams.updateBy"
+          placeholder="请输入更新人"
+          clearable
+          @keyup.enter="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="创建人" prop="createBy">
+        <el-input
+          v-model="queryParams.createBy"
+          placeholder="请输入创建人"
           clearable
           @keyup.enter="handleQuery"
         />
@@ -62,11 +94,23 @@
       <el-table-column label="轮播图id" align="center" prop="carouselId" />
       <el-table-column label="轮播图标题" align="center" prop="carouselTitle" />
       <el-table-column label="轮播图预览" align="center" prop="carouselUrl" >
-        <template #default="scope">
-          <image-preview :src="scope.row.carouselUrl" :width="200" :height="100" />
-        </template>
+          <template #default="scope">
+              <image-preview :src="scope.row.carouselUrl" :width="200" :height="100" />
+          </template>
       </el-table-column>
-      <el-table-column label="轮播图描述" align="center" prop="carouselDescribe" show-overflow-tooltip/>
+      <el-table-column label="轮播图描述" align="center" prop="carouselDescribe" />
+      <el-table-column label="创建人" align="center" prop="createBy" />
+      <el-table-column label="创建时间" align="center" prop="createTime" width="180">
+          <template #default="scope">
+              <span>{{ parseTime(scope.row.createTime, '{y}-{m}-{d}') }}</span>
+          </template>
+      </el-table-column>
+        <el-table-column label="更新人" align="center" prop="updateBy" />
+      <el-table-column label="更新时间" align="center" prop="updateTime" width="180">
+          <template #default="scope">
+              <span>{{ parseTime(scope.row.updateTime, '{y}-{m}-{d}') }}</span>
+          </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['foreground:carousels:edit']">修改</el-button>
@@ -133,6 +177,10 @@ const data = reactive({
     pageSize: 10,
     carouselTitle: null,
     carouselUrl: null,
+    updateTime: null,
+    createTime: null,
+    updateBy: null,
+    createBy: null
   },
   rules: {
     carouselTitle: [
@@ -169,7 +217,11 @@ function reset() {
     carouselTitle: null,
     carouselUrl: null,
     carouselDescribe: null,
-    version: null
+    version: null,
+    updateTime: null,
+    createTime: null,
+    updateBy: null,
+    createBy: null
   };
   proxy.resetForm("carouselsRef");
 }
