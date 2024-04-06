@@ -125,6 +125,19 @@
       </el-table-column>
       <el-table-column label="书籍ISBN号" align="center" prop="bookIsbn" />
       <el-table-column label="书籍简介" align="center" prop="bookSummary" show-overflow-tooltip/>
+      <el-table-column label="标签" align="center" prop="bookTagsList" >
+          <template #default="scope">
+              <el-tag
+                      v-for="item in scope.row.bookTagsList"
+                      type="info"
+                      :key="item.tagName"
+                      :color="item.tagColor"
+                      effect="dark"
+                      size="small"
+                      :hit="false"
+              >{{item.tagName}}</el-tag>
+          </template>
+      </el-table-column>
       <el-table-column label="创建人" align="center" prop="createBy" />
       <el-table-column label="创建时间" align="center" prop="createTime" width="180">
           <template #default="scope">
@@ -154,7 +167,7 @@
     />
 
     <!-- 添加或修改书籍信息对话框 -->
-    <el-dialog :title="title" v-model="open" width="600px" append-to-body>
+    <el-dialog :title="title" v-model="open" width="650px" append-to-body>
       <el-form ref="booksRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="书籍名字" prop="bookName">
           <el-input v-model="form.bookName" placeholder="请输入书籍名字" />
@@ -171,8 +184,24 @@
             />
 
         </el-form-item>
-        <el-form-item label="书籍ISBN号" prop="bookIsbn">
+        <el-form-item label="ISBN" prop="bookIsbn">
           <el-input v-model="form.bookIsbn" placeholder="请输入书籍ISBN号" />
+        </el-form-item>
+        <el-form-item label="书籍标签" prop="checkTags" >
+            <el-select
+                    v-model="form.checkTags"
+                    multiple
+                    placeholder="Select"
+                    style="width: 600px"
+            >
+                <el-option
+                        v-for="item in bookTagsList"
+                        :key="item.tagId"
+                        :label="item.tagName"
+                        :value="item.tagId"
+                />
+                <pagination v-show="tagsTotal>0" :total="tagsTotal" v-model:page="tagsQueryParams.pageNum" v-model:limit="tagsQueryParams.pageSize" @pagination="freshTags" />
+            </el-select>
         </el-form-item>
         <el-form-item label="书籍简介" prop="bookSummary">
           <el-input v-model="form.bookSummary" type="textarea" placeholder="请输入内容" />
@@ -212,6 +241,8 @@ import {getToken} from "@/utils/auth.js";
 import ImagePreview from "@/components/ImagePreview/index.vue";
 import ImageUpload from "@/components/ImageUpload/index.vue";
 import {parseTime} from "@/utils/ruoyi.js";
+import {listTags} from "@/api/foreground/tags.js";
+import Pagination from "@/components/Pagination/index.vue";
 
 const { proxy } = getCurrentInstance();
 
@@ -225,7 +256,9 @@ const checkedBookChapters = ref([]);
 const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
+const tagsTotal = ref(0);
 const title = ref("");
+const bookTagsList = ref([]);
 
 const data = reactive({
   form: {},
@@ -242,6 +275,13 @@ const data = reactive({
     createBy: null,
     lastUpdate: null,
   },
+  tagsQueryParams: {
+      pageNum: 1,
+      pageSize: 10,
+      tagName: null,
+      tagColor: null,
+      tagShadow: null
+  },
   rules: {
     bookName: [
       { required: true, message: "书籍名字不能为空", trigger: "blur" }
@@ -255,11 +295,14 @@ const data = reactive({
     lastUpdate: [
       { required: true, message: "最后更新时间不能为空", trigger: "blur" }
     ],
+    checkTags: [
+        { required: true, message: "书籍标签不能为空", trigger: "blur" }
+    ]
   }
 });
 
 
-const { queryParams, form, rules } = toRefs(data);
+const { queryParams, form, rules, tagsQueryParams } = toRefs(data);
 
 /** 查询书籍信息列表 */
 function getList() {
@@ -269,6 +312,20 @@ function getList() {
     total.value = response.total;
     loading.value = false;
   });
+}
+
+function freshTags() {
+    getBookTags().then(response => {
+        bookTagsList.value = response;
+    });
+}
+function getBookTags() {
+    return new Promise((resolve, reject) => {
+        listTags(tagsQueryParams.value).then(response => {
+            tagsTotal.value = response.total;
+            resolve(response.rows);
+        });
+    });
 }
 
 // 取消按钮
@@ -292,8 +349,10 @@ function reset() {
     updateBy: null,
     createBy: null,
     lastUpdate: null,
+    checkTags: null
   };
   bookChaptersList.value = [];
+  bookTagsList.value = [];
   proxy.resetForm("booksRef");
 }
 
@@ -319,6 +378,9 @@ function handleSelectionChange(selection) {
 /** 新增按钮操作 */
 function handleAdd() {
   reset();
+  getBookTags().then(response => {
+      bookTagsList.value = response;
+  });
   open.value = true;
   title.value = "添加书籍信息";
 }
@@ -330,6 +392,10 @@ function handleUpdate(row) {
   getBooks(_bookId).then(response => {
     form.value = response.data;
     bookChaptersList.value = response.data.bookChaptersList;
+    form.value.checkTags = response.data.bookTagsList.map(item => item.tagId);
+    getBookTags().then(response => {
+      bookTagsList.value = response;
+    });
     open.value = true;
     title.value = "修改书籍信息";
   });
@@ -340,7 +406,10 @@ function submitForm() {
   proxy.$refs["booksRef"].validate(valid => {
     if (valid) {
       form.value.bookChaptersList = bookChaptersList.value;
-        console.log(form.value)
+      form.value.bookTagsList = form.value.checkTags.map(item => {
+          return {tagId: item};
+      });
+        console.log(form.value.checkTags)
       if (form.value.bookId != null) {
         updateBooks(form.value).then(() => {
           proxy.$modal.msgSuccess("修改成功");
@@ -386,10 +455,10 @@ function handleDeleteBookChapters() {
   if (checkedBookChapters.value.length === 0) {
     proxy.$modal.msgError("请先选择要删除的书籍的章节信息数据");
   } else {
-    const bookChapterss = bookChaptersList.value;
-    const checkedBookChapterss = checkedBookChapters.value;
-    bookChaptersList.value = bookChapterss.filter(function(item) {
-      return checkedBookChapterss.indexOf(item.index) === -1
+    const bookChaptersL = bookChaptersList.value;
+    const checkedBookChaptersL = checkedBookChapters.value;
+    bookChaptersList.value = bookChaptersL.filter(function(item) {
+      return checkedBookChaptersL.indexOf(item.index) === -1
     });
   }
 }
