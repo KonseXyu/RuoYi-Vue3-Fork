@@ -1,6 +1,22 @@
 <template>
     <div class="app-container">
         <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="68px">
+            <el-form-item label="书籍名称" prop="bookName">
+                <el-input
+                    v-model="queryParams.bookName"
+                    placeholder="请输入书籍名称"
+                    clearable
+                    @keyup.enter="handleQuery"
+                />
+            </el-form-item>
+            <el-form-item label="章节名称" prop="chapterInfo">
+                <el-input
+                    v-model="queryParams.chapterInfo"
+                    placeholder="请输入章节名称"
+                    clearable
+                    @keyup.enter="handleQuery"
+                />
+            </el-form-item>
             <el-form-item label="题目名称" prop="questionName">
                 <el-input
                         v-model="queryParams.questionName"
@@ -329,7 +345,6 @@ const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
 const bookTotal = ref(0);
-const chapterTotal = ref(0);
 const title = ref("");
 const questionsOptionList = ref([]);
 const checkQuestionsOption = ref([]);
@@ -477,7 +492,6 @@ function handleAdd() {
     reset();
     getBooksList().then(response => {
         form.value.books = response;
-
     });
     open.value = true;
     title.value = "添加题目";
@@ -487,7 +501,6 @@ const freshBookList = ()=> getBooksList().then(response => {
     form.value.books = response;
     getChaptersList(form.value.bookId).then(response => {
         form.value.chapters = response;
-        console.log(response)
     });
 });
 /** 修改按钮操作 */
