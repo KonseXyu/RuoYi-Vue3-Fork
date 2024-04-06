@@ -1,6 +1,14 @@
 <template>
     <div class="app-container">
         <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="68px">
+            <el-form-item label="书籍名称" prop="chapterInfo">
+                <el-input
+                        v-model="queryParams.bookName"
+                        placeholder="请输入书籍名称"
+                        clearable
+                        @keyup.enter="handleQuery"
+                />
+            </el-form-item>
             <el-form-item label="章节信息" prop="chapterInfo">
                 <el-input
                         v-model="queryParams.chapterInfo"
