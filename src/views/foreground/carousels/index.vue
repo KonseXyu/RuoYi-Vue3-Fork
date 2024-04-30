@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="轮播图标题" prop="carouselTitle">
+      <el-form-item label="标题" prop="carouselTitle">
         <el-input
           v-model="queryParams.carouselTitle"
           placeholder="请输入轮播图标题"

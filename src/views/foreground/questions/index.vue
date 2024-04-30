@@ -130,7 +130,7 @@
                 </template>
             </el-table-column>
             <el-table-column label="题目名称" align="center" prop="questionName" show-overflow-tooltip/>
-            <el-table-column label="题目选项内容" align="center" prop="questionContent"/>
+            <el-table-column label="题目选项内容" align="center" prop="questionContent" show-overflow-tooltip/>
             <el-table-column label="题目答案" align="center" prop="ans" show-overflow-tooltip>
                 <template #default="scope">
                     <!--              不是判断题就不显示-->
@@ -140,6 +140,7 @@
                 </template>
             </el-table-column>
             <el-table-column label="题目解析" align="center" prop="ansAnalysis" show-overflow-tooltip/>
+            <el-table-column label="AI解析" align="center" prop="aiAnalysis" show-overflow-tooltip/>
             <el-table-column label="创建人" align="center" prop="createBy" />
             <el-table-column label="创建时间" align="center" prop="createTime" width="180">
                 <template #default="scope">
@@ -331,7 +332,7 @@
 <script setup name="Questions">
 import {addQuestions, delQuestions, getQuestions, listQuestions, updateQuestions} from "@/api/foreground/questions";
 import {getBooks, listBooks} from "@/api/foreground/books.js";
-import {parseTime} from "../../../utils/ruoyi.js";
+import {parseTime} from "@/utils/ruoyi.js";
 
 const {proxy} = getCurrentInstance();
 const {tbl_question_type} = proxy.useDict('tbl_question_type');
@@ -351,6 +352,7 @@ const checkQuestionsOption = ref([]);
 const ansList = ref([]);
 const checkedAns = ref([]);
 const watchAnsStatus = ref(false);
+const addStatus = ref(false);
 const updateStatus = ref(false);
 const DEFAULT_JUDGE_OPTION = [{index: "A", option: "√"}, {index: "B", option: "×"}]
 const QUESTIONS_TYPE = {
@@ -403,13 +405,23 @@ const data = reactive({
         chapters:[
             {required: true, message: "所选章节不能为空", trigger: "blur"}
         ],
-        // checkedAns: [
-        //     {required: true, message: "答案不能为空", trigger: "blur"}
-        // ]
+        checkedAns: [
+            {validator: checkSelection, trigger: "change"}
+        ]
     }
 });
 
 const {queryParams, form, rules, booksParams} = toRefs(data);
+
+// 自定义规则
+function checkSelection(rule, value, callback) {
+
+    if (checkedAns.value.length === 0) {
+        callback(new Error('答案不能为空'));
+    } else {
+        callback();
+    }
+}
 
 /** 查询题目列表 */
 function getList() {
@@ -436,6 +448,7 @@ function reset() {
         questionContent: null,
         ans: null,
         ansAnalysis: null,
+        aiAnalysis: null,
         bookId: null,
         chapterId: null,
         version: null,
@@ -489,7 +502,15 @@ function handleSelectionChange(selection) {
 
 /** 新增按钮操作 */
 function handleAdd() {
+    addStatus.value = true;
     reset();
+    handleAddQuestionsOption();
+    //默认单选
+    form.value.questionType = QUESTIONS_TYPE.SINGLE;
+    watchAnsStatus.value = true;
+    //默认答案为A
+    form.value.ans = 'A';
+    checkedAns.value = form.value.ans
     getBooksList().then(response => {
         form.value.books = response;
     });
@@ -503,6 +524,27 @@ const freshBookList = ()=> getBooksList().then(response => {
         form.value.chapters = response;
     });
 });
+
+// 监听 questionType 的变化
+watch(() => form.value.questionType, (newVal) => {
+    if (addStatus.value){
+        if (newVal === QUESTIONS_TYPE.JUDGE) {
+            // 如果是判断题，设置默认的选项和答案
+            questionsOptionList.value = DEFAULT_JUDGE_OPTION;
+            ansList.value = DEFAULT_JUDGE_OPTION;
+            checkedAns.value = DEFAULT_JUDGE_OPTION[0].index;
+        } else if (newVal === QUESTIONS_TYPE.COMPLETION) {
+            // 如果是填空题，清空选项和答案
+            questionsOptionList.value = [];
+            ansList.value = [];
+            checkedAns.value = [];
+        } else {
+            // 如果是单选或多选题，清空答案
+            checkedAns.value = '';
+        }
+    }
+});
+
 /** 修改按钮操作 */
 function handleUpdate(row) {
     reset();
@@ -556,12 +598,16 @@ function submitForm() {
     proxy.$refs["questionsRef"].validate(valid => {
         if (valid) {
             //从[ {"option": "堆排序","index": "A"},...]中取出option
+            console.log(form.value)
             if (form.value.questionContent) {
                 let questionOptionInfo = [];
                 for (let i = 0; i < questionsOptionList.value.length; i++) {
                     questionOptionInfo.push(questionsOptionList.value[i].option);
                 }
                 form.value.questionContent = JSON.stringify(questionOptionInfo);
+            }else {
+                // 设置 questionContent
+                form.value.questionContent = JSON.stringify(questionsOptionList.value.map(item => item.option));
             }
             //处理ANS
             if(QUESTIONS_TYPE.JUDGE === form.value.questionType){
@@ -593,6 +639,7 @@ function submitForm() {
             }
         }
     });
+    addStatus.value = false;
 }
 
 /** 删除按钮操作 */

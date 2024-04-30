@@ -37,7 +37,7 @@
       width="800px"
       append-to-body
     >
-      <img
+      <el-image
         :src="dialogImageUrl"
         style="display: block; max-width: 100%; margin: 0 auto"
       />
@@ -93,7 +93,10 @@ watch(() => props.modelValue, val => {
     // 然后将数组转为对象数组
     fileList.value = list.map(item => {
       if (typeof item === "string") {
-        if (item.indexOf(baseUrl) === -1) {
+        if (item.includes("http")) {
+            item = {name: item, url: item};
+        }
+        else if (item.indexOf(baseUrl) === -1) {
           item = { name: baseUrl + item, url: baseUrl + item };
         } else {
           item = { name: item, url: item };
@@ -188,6 +191,7 @@ function handleUploadError() {
 
 // 预览
 function handlePictureCardPreview(file) {
+    console.log(file)
   dialogImageUrl.value = file.url;
   dialogVisible.value = true;
 }
