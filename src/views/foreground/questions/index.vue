@@ -285,9 +285,9 @@
                 <el-form-item label="">
                 </el-form-item>
                 <!--     单选框       -->
-                <el-form-item label="题目答案" prop="checkedAns"
-                              v-if="form.questionType === QUESTIONS_TYPE.SINGLE || form.questionType === QUESTIONS_TYPE.JUDGE">
-                    <el-radio-group v-model="checkedAns">
+                <el-form-item label="题目答案" prop="checkedAnsSingle"
+                              v-if="form.questionType === QUESTIONS_TYPE.SINGLE">
+                    <el-radio-group v-model="checkedAnsSingle">
                         <el-radio
                                 v-for="ans in ansList"
                                 :key="ans.option"
@@ -298,9 +298,23 @@
                         >
                     </el-radio-group>
                 </el-form-item>
+                <!--     判断框       -->
+                <el-form-item label="题目答案" prop="checkedAnsJudge"
+                              v-if="form.questionType === QUESTIONS_TYPE.JUDGE">
+                    <el-radio-group v-model="checkedAnsJudge">
+                        <el-radio
+                            v-for="ans in DEFAULT_JUDGE_OPTION"
+                            :key="ans.option"
+                            :label="ans.index"
+                            :value="ans"
+                        >{{ ans.index + ":" + ans.option }}
+                        </el-radio
+                        >
+                    </el-radio-group>
+                </el-form-item>
                 <!--     多选框       -->
-                <el-form-item label="题目答案" prop="checkedAns" v-if="form.questionType === QUESTIONS_TYPE.MULTIPLE">
-                    <el-checkbox-group v-model="checkedAns" :max="26">
+                <el-form-item label="题目答案" prop="checkedAnsMultiple" v-if="form.questionType === QUESTIONS_TYPE.MULTIPLE">
+                    <el-checkbox-group v-model="checkedAnsMultiple" :max="26">
                         <el-checkbox
                                 v-for="ans in ansList"
                                 :key="ans.option"
@@ -329,7 +343,7 @@
     </div>
 </template>
 
-<script setup name="Questions">
+<script setup name="Questions" >
 import {addQuestions, delQuestions, getQuestions, listQuestions, updateQuestions} from "@/api/foreground/questions";
 import {getBooks, listBooks} from "@/api/foreground/books.js";
 import {parseTime} from "@/utils/ruoyi.js";
@@ -350,7 +364,9 @@ const title = ref("");
 const questionsOptionList = ref([]);
 const checkQuestionsOption = ref([]);
 const ansList = ref([]);
-const checkedAns = ref([]);
+const checkedAnsMultiple = ref([]);
+const checkedAnsSingle = ref(null);
+const checkedAnsJudge = ref(null);
 const watchAnsStatus = ref(false);
 const addStatus = ref(false);
 const updateStatus = ref(false);
@@ -405,8 +421,14 @@ const data = reactive({
         chapters:[
             {required: true, message: "所选章节不能为空", trigger: "blur"}
         ],
-        checkedAns: [
-            {validator: checkSelection, trigger: "change"}
+        checkedAnsMultiple: [
+            {validator: checkSelectionMultiple, trigger: "change"}
+        ],
+        checkedAnsSingle: [
+            {validator: checkSelectionSingle, trigger: "change"}
+        ],
+        checkedAnsJudge: [
+            {validator: checkSelectionJudge, trigger: "change"}
         ]
     }
 });
@@ -414,9 +436,25 @@ const data = reactive({
 const {queryParams, form, rules, booksParams} = toRefs(data);
 
 // 自定义规则
-function checkSelection(rule, value, callback) {
+function checkSelectionMultiple(rule, value, callback) {
 
-    if (checkedAns.value.length === 0) {
+    if (checkedAnsMultiple.value.length === 0) {
+        callback(new Error('答案不能为空'));
+    } else {
+        callback();
+    }
+}
+
+function checkSelectionSingle(rule, value, callback) {
+    if (!checkedAnsSingle.value) {
+        callback(new Error('答案不能为空'));
+    } else {
+        callback();
+    }
+}
+
+function checkSelectionJudge(rule, value, callback) {
+    if (!checkedAnsJudge.value) {
         callback(new Error('答案不能为空'));
     } else {
         callback();
@@ -462,9 +500,12 @@ function reset() {
     checkQuestionsOption.value = [];
     questionsOptionList.value = [];
     ansList.value = [];
-    checkedAns.value = [];
+    checkedAnsMultiple.value = [];
+    checkedAnsSingle.value = null;
+    checkedAnsJudge.value = null;
     watchAnsStatus.value = false;
     updateStatus.value = false;
+    addStatus.value = false;
     proxy.resetForm("questionsRef");
 }
 
@@ -508,9 +549,6 @@ function handleAdd() {
     //默认单选
     form.value.questionType = QUESTIONS_TYPE.SINGLE;
     watchAnsStatus.value = true;
-    //默认答案为A
-    form.value.ans = 'A';
-    checkedAns.value = form.value.ans
     getBooksList().then(response => {
         form.value.books = response;
     });
@@ -523,26 +561,6 @@ const freshBookList = ()=> getBooksList().then(response => {
     getChaptersList(form.value.bookId).then(response => {
         form.value.chapters = response;
     });
-});
-
-// 监听 questionType 的变化
-watch(() => form.value.questionType, (newVal) => {
-    if (addStatus.value){
-        if (newVal === QUESTIONS_TYPE.JUDGE) {
-            // 如果是判断题，设置默认的选项和答案
-            questionsOptionList.value = DEFAULT_JUDGE_OPTION;
-            ansList.value = DEFAULT_JUDGE_OPTION;
-            checkedAns.value = DEFAULT_JUDGE_OPTION[0].index;
-        } else if (newVal === QUESTIONS_TYPE.COMPLETION) {
-            // 如果是填空题，清空选项和答案
-            questionsOptionList.value = [];
-            ansList.value = [];
-            checkedAns.value = [];
-        } else {
-            // 如果是单选或多选题，清空答案
-            checkedAns.value = '';
-        }
-    }
 });
 
 /** 修改按钮操作 */
@@ -570,17 +588,16 @@ function handleUpdate(row) {
 
         if (form.value.questionType === QUESTIONS_TYPE.SINGLE) { //单选
             watchAnsStatus.value = true;
-            checkedAns.value = form.value.ans
+            checkedAnsSingle.value = form.value.ans
         } else if (form.value.questionType === QUESTIONS_TYPE.MULTIPLE) { //多选
             watchAnsStatus.value = true;
             for (let i = 0; i < form.value.ans.length; i++) {
-                checkedAns.value.push(questionsOptionList.value[form.value.ans[i].charCodeAt(0) - 65])
+                checkedAnsMultiple.value.push(questionsOptionList.value[form.value.ans[i].charCodeAt(0) - 65])
             }
         } else if (form.value.questionType === QUESTIONS_TYPE.JUDGE) { // 判断
             watchAnsStatus.value = false;
             ansList.value = DEFAULT_JUDGE_OPTION
-
-            checkedAns.value = form.value.ans === "1" ? DEFAULT_JUDGE_OPTION[0].index : DEFAULT_JUDGE_OPTION[1].index;
+            checkedAnsJudge.value = form.value.ans === "1" ? DEFAULT_JUDGE_OPTION[0].index : DEFAULT_JUDGE_OPTION[1].index;
         }
         open.value = true;
         title.value = "修改题目";
@@ -598,7 +615,6 @@ function submitForm() {
     proxy.$refs["questionsRef"].validate(valid => {
         if (valid) {
             //从[ {"option": "堆排序","index": "A"},...]中取出option
-            console.log(form.value)
             if (form.value.questionContent) {
                 let questionOptionInfo = [];
                 for (let i = 0; i < questionsOptionList.value.length; i++) {
@@ -611,17 +627,21 @@ function submitForm() {
             }
             //处理ANS
             if(QUESTIONS_TYPE.JUDGE === form.value.questionType){
-                form.value.ans = checkedAns.value === "A" ? 1 : 0;
+                form.value.ans = checkedAnsJudge.value === "A" ? 1 : 0;
+                form.value.questionContent = null; // 判断题没有选项
             }else if(QUESTIONS_TYPE.MULTIPLE === form.value.questionType){
                 let ans = [];
-                for (let i = 0; i < checkedAns.value.length; i++) {
-                    ans += checkedAns.value[i].index;
+                for (let i = 0; i < checkedAnsMultiple.value.length; i++) {
+                    ans += checkedAnsMultiple.value[i].index;
                 }
                 //将ans字典序排序
                 form.value.ans = ans.split('').sort().join('');
             }else if(QUESTIONS_TYPE.SINGLE === form.value.questionType){
-                form.value.ans = checkedAns.value;
+                form.value.ans = checkedAnsSingle.value;
+            }else { //填空题
+                form.value.questionContent = null; // 填空题没有选项
             }
+
             if (form.value.questionId != null) {
                 updateQuestions(form.value).then(response => {
                     proxy.$modal.msgSuccess("修改成功");
@@ -684,9 +704,9 @@ function handleDeleteQuestionsOption() {
             return checkQuestionsOptions.indexOf(item.index) === -1
         });
         //同时删除多选框的勾选选中
-        const checkAnsList = checkedAns.value;
+        const checkAnsList = checkedAnsMultiple.value;
         const checkAnsDelete = checkQuestionsOption.value;
-        checkedAns.value = checkAnsList.filter(function (item) {
+        checkedAnsMultiple.value = checkAnsList.filter(function (item) {
             return checkAnsDelete.indexOf(item.index) === -1
         });
     }
