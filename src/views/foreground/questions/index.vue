@@ -329,8 +329,11 @@
                 <el-form-item label="题目答案" prop="ans" v-if="form.questionType === QUESTIONS_TYPE.COMPLETION">
                     <el-input v-model="form.ans" type="textarea" placeholder="请输入内容"/>
                 </el-form-item>
-                <el-form-item label="题目解析" prop="ansAnalysis">
+                <el-form-item label="题目解析" prop="ansAnalysis" :autosize="{ minRows: 2, maxRows: 30 }">
                     <el-input v-model="form.ansAnalysis" type="textarea" placeholder="请输入内容"/>
+                </el-form-item>
+                <el-form-item label="AI解析" prop="aiAnalysis" v-show="showAiText" readonly="true">
+                    <el-input v-model="aiAnalysis" type="textarea" placeholder="请输入内容" :autosize="{ minRows: 2, maxRows: 30 }"/>
                 </el-form-item>
             </el-form>
             <template #footer>
@@ -344,7 +347,14 @@
 </template>
 
 <script setup name="Questions" >
-import {addQuestions, delQuestions, getQuestions, listQuestions, updateQuestions} from "@/api/foreground/questions";
+import {
+    addQuestions, addQuestionsAndAiAnalysis,
+    delQuestions,
+    getQuestions,
+    listQuestions,
+    updateQuestions,
+    updateQuestionsAndAiAnalysis
+} from "@/api/foreground/questions";
 import {getBooks, listBooks} from "@/api/foreground/books.js";
 import {parseTime} from "@/utils/ruoyi.js";
 
@@ -352,6 +362,8 @@ const {proxy} = getCurrentInstance();
 const {tbl_question_type} = proxy.useDict('tbl_question_type');
 
 const questionsList = ref([]);
+const aiAnalysis = ref("");
+const showAiText = ref(false);
 const open = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
@@ -435,6 +447,34 @@ const data = reactive({
 
 const {queryParams, form, rules, booksParams} = toRefs(data);
 
+const initSSE = (verify_id)=> {
+    return new Promise((resolve, reject) => {
+        const eventSource = new EventSource(`http://localhost:801/dev-api/chat/${verify_id}`);
+        showAiText.value = true;
+        // 创建一个SSE对象，连接到后端的/chat接口
+        eventSource.onmessage = function (event) {
+            let data = JSON.parse(event.data);
+            // 在这里处理接收到的数据
+            console.log(data);
+            nextTick(() => {
+                aiAnalysis.value += data.result;
+            })
+
+            if (data.is_end === true) {
+                eventSource.close();
+                resolve();
+            }
+        };
+
+        eventSource.onerror = function (event) {
+            console.error("SSE error", event);
+            // 当发生错误时，关闭连接
+            eventSource.close();
+            reject();
+        };
+    });
+}
+
 // 自定义规则
 function checkSelectionMultiple(rule, value, callback) {
 
@@ -495,8 +535,10 @@ function reset() {
         updateBy: null,
         createBy: null,
         books:null,
-        chapters:null
+        chapters:null,
     };
+    aiAnalysis.value = "";
+    showAiText.value= false;
     checkQuestionsOption.value = [];
     questionsOptionList.value = [];
     ansList.value = [];
@@ -643,14 +685,25 @@ function submitForm() {
             }
 
             if (form.value.questionId != null) {
-                updateQuestions(form.value).then(response => {
+                updateQuestions(form.value).then(async response => {
+                    console.log(response.data)
+                    if (response.data) {
+                        await initSSE(response.data)
+                        updateQuestionsAndAiAnalysis(response.data, aiAnalysis.value).then(response => {
+                        });
+                    }
                     proxy.$modal.msgSuccess("修改成功");
                     open.value = false;
                     reset();
                     getList();
                 });
             } else {
-                addQuestions(form.value).then(response => {
+                addQuestions(form.value).then(async response => {
+                    if (response.data) {
+                        await initSSE(response.data)
+                        addQuestionsAndAiAnalysis(response.data, aiAnalysis.value).then(response => {
+                        });
+                    }
                     proxy.$modal.msgSuccess("新增成功");
                     open.value = false;
                     reset();
