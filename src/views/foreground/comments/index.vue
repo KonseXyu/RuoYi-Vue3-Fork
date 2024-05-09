@@ -3,7 +3,7 @@
         <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="68px">
             <el-form-item label="创建时间" style="width: 308px">
                 <el-date-picker
-                    v-model="daterangeCreateTime"
+                    v-model="dateRangeCreateTime"
                     value-format="YYYY-MM-DD"
                     type="daterange"
                     range-separator="-"
@@ -13,7 +13,7 @@
             </el-form-item>
             <el-form-item label="更新时间" style="width: 308px">
                 <el-date-picker
-                    v-model="daterangeUpdateTime"
+                    v-model="dateRangeUpdateTime"
                     value-format="YYYY-MM-DD"
                     type="daterange"
                     range-separator="-"
@@ -122,8 +122,8 @@ const total = ref(0);
 const title = ref("");
 const isExpandAll = ref(true);
 const refreshTable = ref(true);
-const daterangeCreateTime = ref([]);
-const daterangeUpdateTime = ref([]);
+const dateRangeCreateTime = ref([]);
+const dateRangeUpdateTime = ref([]);
 const REPLY_HEADER = "-reply: ";
 const data = reactive({
     form: {},
@@ -144,13 +144,13 @@ const {queryParams, form, rules} = toRefs(data);
 function getList() {
     loading.value = true;
     queryParams.value.params = {};
-    if (null != daterangeCreateTime && '' !== daterangeCreateTime) {
-        queryParams.value.params["beginCreateTime"] = daterangeCreateTime.value[0];
-        queryParams.value.params["endCreateTime"] = daterangeCreateTime.value[1];
+    if (null != dateRangeCreateTime && '' !== dateRangeCreateTime) {
+        queryParams.value.params["beginCreateTime"] = dateRangeCreateTime.value[0];
+        queryParams.value.params["endCreateTime"] = dateRangeCreateTime.value[1];
     }
-    if (null != daterangeUpdateTime && '' !== daterangeUpdateTime) {
-        queryParams.value.params["beginUpdateTime"] = daterangeUpdateTime.value[0];
-        queryParams.value.params["endUpdateTime"] = daterangeUpdateTime.value[1];
+    if (null != dateRangeUpdateTime && '' !== dateRangeUpdateTime) {
+        queryParams.value.params["beginUpdateTime"] = dateRangeUpdateTime.value[0];
+        queryParams.value.params["endUpdateTime"] = dateRangeUpdateTime.value[1];
     }
     listComments(queryParams.value).then(response => {
         commentsList.value = response.data;
@@ -208,8 +208,8 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-    daterangeCreateTime.value = [];
-    daterangeUpdateTime.value = [];
+    dateRangeCreateTime.value = [];
+    dateRangeUpdateTime.value = [];
     proxy.resetForm("queryRef");
     handleQuery();
 }
@@ -262,7 +262,7 @@ function submitForm() {
 
 /** 删除按钮操作 */
 function handleDelete(row) {
-    const _commentIds = row.commentId || ids.value;
+    const _commentIds = [row.commentId] || ids.value;
     const commentIdMain = _commentIds.filter(item => !item.toString().includes(REPLY_HEADER))
     //不存在commentIdMain中的子项
     const replyIdList = _commentIds.filter(item => item.toString().includes(REPLY_HEADER))
