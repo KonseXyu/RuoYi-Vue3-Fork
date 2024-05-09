@@ -42,3 +42,16 @@ export function delComments(commentId) {
     method: 'delete'
   })
 }
+export function delCommentsAndReply(commentId, replyId){
+  return request({
+    url: '/foreground/comments/' + commentId + "/" + replyId,
+    method: 'delete'
+  })
+}
+
+export function delReply(replyId){
+  return request({
+    url: '/foreground/comments/reply/' + replyId,
+    method: 'delete'
+  })
+}
